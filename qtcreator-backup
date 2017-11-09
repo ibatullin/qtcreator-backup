@@ -3,20 +3,49 @@
 require 'thor'
 require 'fileutils'
 
-class QtCreatorConfig < Thor
-  class_option :config_path, :default => ENV['HOME']+"/.config/QtProject/"
-  class_option :backup_path, :default => "./qtcreator-config-backup/", :type => :string
+module QtCreatorBackup
+  class Base < Thor
+    class_option :config, :default => File.join(ENV['HOME'], "/.config/QtProject/")
+    class_option :backup, :default => "./qtcreator-config-backup/", :type => :string
 
-  desc "snippets", "Copy snippets"
-  def snippets
-    FileUtils.mkdir_p options[:backup_path]
-    FileUtils.cp_r options[:config_path] + "/qtcreator/snippets/", options[:backup_path] + "/qtcreator/"
+    def initialize(*args)
+      super
+      @config = options[:config]
+      @backup = options[:backup]
+
+      snippets_path = "qtcreator/snippets"
+      @config_snippets = File.join(@config, snippets_path)
+      @backup_snippets = File.join(@backup, snippets_path)
+
+      ini_name = "QtCreator.ini"
+      @config_ini = File.join(@config, ini_name)
+      @backup_ini = File.join(@backup, ini_name)
+    end
+
   end
 
-  desc "backup", "Backup all"
-  def backup
-    invoke :snippets
+  class Backup < QtCreatorBackup::Base
+    def initialize(*args)
+      super
+      prepare_backup
+    end
+
+    desc "snippets", "Copy snippets"
+    def snippets
+      FileUtils.cp_r @config_snippets, File.join(@backup_snippets, "..")
+    end
+
+    private
+    def prepare_backup
+      FileUtils.mkdir_p @backup
+      FileUtils.mkdir_p @backup_snippets
+    end
+  end
+
+  class Cli < Thor
+    desc "backup", "backup [COMMAND [ARGS]]"
+    subcommand "backup", Backup
   end
 end
 
-QtCreatorConfig.start(ARGV)
+QtCreatorBackup::Cli.start(ARGV)
