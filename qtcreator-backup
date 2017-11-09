@@ -2,6 +2,7 @@
 
 require 'thor'
 require 'fileutils'
+require 'inifile'
 
 module QtCreatorBackup
   class Base < Thor
@@ -33,6 +34,28 @@ module QtCreatorBackup
     desc "snippets", "Copy snippets"
     def snippets
       FileUtils.cp_r @config_snippets, File.join(@backup_snippets, "..")
+    end
+
+    desc "settings", "Copy settings"
+    option :sections, :type => :array,
+      :default => [ "Analyzer", "Console", "CppCodeStyleSettings", "DebugMode", "DiffEditor", "EditorManager",
+        "FakeVim", "FakeVimExCommand", "FakeVimUserCommand", "Git", "KeyboardShortcuts", "Mercurial", "Plugins", "QML",
+        "QML.Inspector", "QbsProjectManager", "Subversion", "TodoPlugin", "Updater",
+        "bazaar", "textDisplaySettings", "textMarginSettings" ]
+    def settings
+      config = IniFile.load(@config_ini)
+      sections = options[:sections] & config.sections
+      backup = IniFile.new
+      sections.each do |section|
+        backup[section] = config[section]
+        backup.write(:filename => @backup_ini)
+      end
+    end
+
+    desc "all", "Backup all"
+    def all
+      invoke :snippets
+      invoke :settings
     end
 
     private
