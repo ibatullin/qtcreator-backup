@@ -65,9 +65,44 @@ module QtCreatorBackup
     end
   end
 
+  class Restore < Base
+    def initialize(*args)
+      super
+      prepare_restore
+    end
+
+    desc "snippets", "Restore snippets"
+    def snippets
+      FileUtils.cp_r @backup_snippets, File.join(@config_snippets, "..")
+    end
+
+    desc "settings", "Merge settings"
+    def settings
+      backup = IniFile.load(@backup_ini)
+      config = (IniFile.load(@config_ini) || IniFile.new)
+      config.merge!(backup)
+      config.write(:filename => @config_ini)
+    end
+
+    desc "all", "Restore all"
+    def all
+      invoke :snippets
+      invoke :settings
+    end
+
+    private
+    def prepare_restore
+      FileUtils.mkdir_p @config
+      FileUtils.mkdir_p @config_snippets
+    end
+  end
+
   class Cli < Thor
     desc "backup", "backup [COMMAND [ARGS]]"
     subcommand "backup", Backup
+
+    desc "restore", "restore [COMMAND [ARGS]]"
+    subcommand "restore", Restore
   end
 end
 
